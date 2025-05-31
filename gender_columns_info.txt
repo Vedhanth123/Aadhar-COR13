@@ -1,0 +1,29 @@
+Gender DataFrame Column Information:
+Shape: (2, 18)
+
+Column indices and names:
+0: Category
+1: CAP LRM cohort
+2: CAP 12  cohort
+3: Average Cumulative Combined KPI - performance Achievement % of Cohort LRM
+4: CAP on COMBINED  KPI of Top 10% performers in CAP 12 COHORT
+5: CAP on COMBINED  KPI of Bottom  10% performers in CAP 12 COHORT
+6: Performance multiple of the CAP 12 cohort
+7: Average Cumulative  KPI  1- performance Achievement % of Cohort LRM
+8: CAP on KPI  1 of Top 10% performers in CAP 12 COHORT
+9: CAP on KPI 1 of Bottom  10% performers in CAP 12 COHORT
+10: Performance multiple ON KPI 1  of the CAP 12 cohort
+11: Time to make the first sale CAP LRM cohort
+12: CAR2CATPO ratio  UP TO  Residency month 6 for CAP LRM cohort
+13: Count of  attrited employees in Cohort LRM
+14: Average Residency of all employees in COHORT LRM
+15: Average Residency of TOP 100 employees in KPI 1  in COHORT LRM
+16: attrition in the first six residency months as a % of people joined ( Cohort LRM) 
+17: Infant attrition - attritted employees in the first 6 months as a % of all attritted employees in the first 23 months in the sub cohort
+
+Sample data for columns 4, 5, 8, 9 (indices start at 0):
+  Category  ...  CAP on KPI 1 of Bottom  10% performers in CAP 12 COHORT
+0     Male  ...                                           0.085888      
+1   Female  ...                                           0.083462      
+
+[2 rows x 5 columns]

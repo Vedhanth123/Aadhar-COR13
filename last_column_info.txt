@@ -1,0 +1,11 @@
+Last column (index 17): Infant attrition - attritted employees in the first 6 months as a % of all attritted employees in the first 23 months in the sub cohort
+
+Data for this column:
+  Category  Infant attrition - attritted employees in the first 6 months as a % of all attritted employees in the first 23 months in the sub cohort
+0     Male                                           0.657099                                                                                      
+1   Female                                           0.608501                                                                                      
+
+Column data type: float64
+Min value: 0.6085011185682326
+Max value: 0.6570992366412214
+Mean value: 0.632800177604727
