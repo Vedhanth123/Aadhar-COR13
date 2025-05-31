@@ -8,73 +8,75 @@ import sys
 # Set seaborn style
 sns.set_theme(style="whitegrid")
 
-@st.cache_data
-def load_data():
+def main():    # Set page configuration
+    st.set_page_config(
+        page_title="Aadhar Analysis Dashboard",
+        page_icon="📊",
+        layout="wide"
+    )
+    
+    st.markdown("""
+        <div style='text-align: center; margin-bottom: 40px;'>
+            <h1 style='font-weight: 800; color: #0047AB; font-size: 46px; margin-bottom: 10px; text-shadow: 1px 1px 3px rgba(0,0,0,0.2);'>
+                Aadhar Analysis Dashboard
+            </h1>
+            <div style='width: 100px; height: 5px; background-color: #0047AB; margin: 0 auto 10px auto; border-radius: 2px;'></div>
+            <p style='color: #555; font-size: 18px; font-weight: 500;'>Executive Summary Report</p>
+        </div>
+    """, unsafe_allow_html=True)
+      # Load all dataframes
     with st.spinner('Loading data from Aadhar_modified.xlsx...'):
         try:
+            st.info("Loading data from Excel file. This may take a moment...")
             Gender = pd.read_excel('Aadhar_modified.xlsx', sheet_name='Gender')
             Education = pd.read_excel('Aadhar_modified.xlsx', sheet_name='Education')
             Experience = pd.read_excel('Aadhar_modified.xlsx', sheet_name='Experience')
             Age = pd.read_excel('Aadhar_modified.xlsx', sheet_name='Age')
-            return Gender, Education, Experience, Age
-        except FileNotFoundError:
-            st.error("The file Aadhar_modified.xlsx was not found.")
-            st.stop()
+            st.success("Data loaded successfully!")
+            
+            # Create list of dataframes with their display names
+            all_dataframes = [
+                {"df": Gender, "name": "Gender"},
+                {"df": Education, "name": "Education"},
+                {"df": Experience, "name": "Experience"},
+                {"df": Age, "name": "Age"}
+            ]
+              # Create a dropdown to select the category with clear styling
+            st.markdown("<h2 style='text-align: center; color: #444; margin: 20px 0;'>Select a category to analyze:</h2>", unsafe_allow_html=True)
+            category = st.selectbox(
+                "",
+                ['Gender', 'Education', 'Experience', 'Age'],
+                index=1 if 'Education' in sys.argv else 0,
+                format_func=lambda x: f"{x}"
+            )
+            
+            # Find the corresponding dataframe
+            selected_df = next(data for data in all_dataframes if data["name"] == category)
+            
+            # Create the dashboard for the selected category
+            create_dashboard(selected_df["df"], selected_df["name"])
+                    
         except Exception as e:
             st.error(f"Error loading data: {str(e)}")
             st.exception(e)  # This will display the full traceback
 
-# ...existing code...
-
-def main():    # Set page configuration
-    st.set_page_config(
-        layout="wide",
-        page_title="Aadhar Analysis Dashboard",
-        page_icon="📊"
-    )
-    st.markdown("<h1 style='text-align: center; font-weight: 800; color: #0047AB; margin-bottom: 30px; font-size: 46px;'>Aadhar Analysis Dashboard</h1>", unsafe_allow_html=True)
-
-    # Load data
-    Gender, Education, Experience, Age = load_data()
-    
-    # Create list of dataframes with their display names
-    all_dataframes = [
-        {"df": Gender, "name": "Gender"},
-        {"df": Education, "name": "Education"},
-        {"df": Experience, "name": "Experience"},
-        {"df": Age, "name": "Age"}
-    ]
-    
-    # Create a dropdown to select the category with clear styling
-    st.markdown("<h2 style='text-align: center; color: #444; margin: 20px 0;'>Select a category to analyze:</h2>", unsafe_allow_html=True)
-    category = st.selectbox(
-        "",
-        ['Gender', 'Education', 'Experience', 'Age'],
-        index=1 if 'Education' in sys.argv else 0,
-        format_func=lambda x: f"{x}"
-    )
-    
-    # Find the corresponding dataframe
-    selected_df = next(data for data in all_dataframes if data["name"] == category)
-    
-    # Create the dashboard for the selected category
-    create_dashboard(selected_df["df"], selected_df["name"])
-                    
 def create_dashboard(df, name):
     """Create a dashboard visualization for the given dataframe in Streamlit."""
-    st.markdown(f"<h1 style='text-align: center; font-weight: 700; color: #1E3A8A;'>{name} Analysis Dashboard</h1>", unsafe_allow_html=True)
+    st.markdown(f"<h1 style='text-align: center; font-weight: 800; color: #0A2472; margin-bottom: 20px; text-shadow: 1px 1px 2px #ccc;'>{name} Analysis Dashboard</h1>", unsafe_allow_html=True)
     
-    # Show information about the data
-    st.markdown(f"<h3 style='text-align: center;'>Dataset contains {len(df)} rows</h3>", unsafe_allow_html=True)
+    # Show information about the data with improved styling
+    st.markdown(f"<h3 style='text-align: center; color: #444; background-color: #f8f9fa; padding: 10px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>Executive Dashboard • {len(df)} Data Points</h3>", unsafe_allow_html=True)
     
-    # Enable user to select which charts to display
+    # Enable user to select which charts to display with improved styling
+    st.markdown("<div style='background-color: #f0f2f6; padding: 15px; border-radius: 10px; margin-bottom: 20px;'>", unsafe_allow_html=True)
     selected_charts = st.multiselect(
-        'Select charts to display:',
+        '📊 Select visualizations to display:',
         ['Distribution', 'KPI Performance', 'Performance Multiple', 
          'Top vs Bottom Performers', 'Time to First Sale', 'CAR2CATPO Ratio',
          'Attrition Count', 'Average Residency', 'Infant Attrition'],
         default=['Distribution', 'KPI Performance', 'Performance Multiple']
     )
+    st.markdown("</div>", unsafe_allow_html=True)
     
     # Create a list of chart creation functions
     chart_functions = {
@@ -88,19 +90,34 @@ def create_dashboard(df, name):
         'Average Residency': create_average_residency_chart,
         'Infant Attrition': create_infant_attrition_chart
     }
-    
-    # Create 3-column layout for charts
-    col1, col2, col3 = st.columns(3)
-    columns = [col1, col2, col3] * 3  # Repeat columns for 9 charts
-      # Display the selected charts
-    for i, chart_name in enumerate(selected_charts):
-        with columns[i % 3]:
-            try:
-                with st.container():
-                    st.markdown(f"<h2 style='text-align: center; font-weight: 600; color: #333; background-color: #f0f2f6; padding: 10px; border-radius: 5px;'>{chart_name}</h2>", unsafe_allow_html=True)
-                    chart_functions[chart_name](df, name)
-            except Exception as e:
-                st.error(f"Error generating {chart_name} chart: {str(e)}")
+      # Organize charts into rows with equal heights
+    # Determine how many rows we need (3 charts per row)
+    num_charts = len(selected_charts)
+    num_rows = (num_charts + 2) // 3  # Integer division rounded up
+      # Create each row of charts
+    for row in range(num_rows):
+        # Create columns for this row
+        cols = st.columns(3)
+        
+        # Add charts to this row
+        for col_idx in range(3):
+            chart_idx = row * 3 + col_idx
+            if chart_idx < num_charts:
+                chart_name = selected_charts[chart_idx]
+                with cols[col_idx]:
+                    try:
+                        with st.container():
+                            st.markdown(f"""
+                                <div style='border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);'>
+                                    <h2 style='text-align: center; font-weight: 700; color: #0A2472; background-color: #f0f2f6; 
+                                    padding: 15px; margin: 0; border-bottom: 2px solid #e0e0e0;'>
+                                    {chart_name}</h2>
+                                    <div style='padding: 10px 0;'>
+                            """, unsafe_allow_html=True)
+                            chart_functions[chart_name](df, name)
+                            st.markdown("</div></div>", unsafe_allow_html=True)
+                    except Exception as e:
+                        st.error(f"Error generating {chart_name} chart: {str(e)}")
 
 def create_distribution_chart(df, name):
     """Create the distribution chart."""
@@ -118,22 +135,27 @@ def create_distribution_chart(df, name):
     # Calculate percentages for each cohort
     for metric in [first_cols[1], first_cols[2]]:
         total = df[metric].sum()
-        df_melted.loc[df_melted['Metric'] == metric, 'Percentage'] = df_melted.loc[df_melted['Metric'] == metric, 'Count'] / total * 100    # Using seaborn barplot with grouped bars and better colors
+        df_melted.loc[df_melted['Metric'] == metric, 'Percentage'] = df_melted.loc[df_melted['Metric'] == metric, 'Count'] / total * 100    
+    
+    # Using seaborn barplot with grouped bars and better colors
     bars = sns.barplot(x='Category', y='Count', hue='Metric', 
                       data=df_melted, 
                       palette=['#1f77b4', '#9ecae1'], 
-                      ax=ax)
+                      ax=ax, width=0.7)
 
     ax.set_title(f'{name} Distribution by Cohort', pad=20)
     ax.set_xlabel(f'{name}', labelpad=15)
-    ax.set_ylabel('Head Count', labelpad=15)    # Adding value labels and percentages on top of each bar with larger font size
+    ax.set_ylabel('Head Count', labelpad=15)    # Adding value labels and percentages with staggered positioning to avoid overlap
     for container_idx, container in enumerate(ax.containers):
         labels = []
         for bar_idx, bar in enumerate(container):
             count = bar.get_height()
             percentage = df_melted.iloc[container_idx*2+bar_idx if container_idx < 2 else bar_idx]['Percentage']
             labels.append(f'{int(count)}\n({percentage:.1f}%)')
-        ax.bar_label(container, labels=labels, padding=10, fontsize=14, fontweight='bold')
+        
+        # Use different padding for each container to stagger labels
+        padding = 8 if container_idx % 2 == 0 else 18
+        ax.bar_label(container, labels=labels, padding=padding, fontsize=13, fontweight='bold')
 
     # Enhance grid for better readability
     ax.grid(axis='y', linestyle='--', alpha=0.7)
@@ -141,6 +163,10 @@ def create_distribution_chart(df, name):
     # Adjust legend with better styling
     legend = ax.legend(title='Cohort Type', fontsize=14)
     plt.setp(legend.get_title(), fontsize=16, fontweight='bold')
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
     
     # Rotate x-axis labels for Education dashboard
     if name == "Education":
@@ -162,13 +188,11 @@ def create_kpi_performance_chart(df, name):
 
     # Create shorter column names for display
     col4_short = "Cumulative Combined KPI"
-    col8_short = "Cumulative KPI 1"
-
-    # Create a DataFrame with the data and specified columns
+    col8_short = "Cumulative KPI 1"    # Create a DataFrame with the data and specified columns, multiplying KPI values by 100 to show as percentages
     kpi_data = pd.DataFrame({
         'Category': df['Category'],
-        col4_short: df[col4],
-        col8_short: df[col8]
+        col4_short: df[col4] * 100,  # Multiply by 100 to convert to percentage
+        col8_short: df[col8] * 100   # Multiply by 100 to convert to percentage
     })
 
     # Reshape data for seaborn
@@ -176,21 +200,35 @@ def create_kpi_performance_chart(df, name):
                          id_vars=['Category'], 
                          value_vars=[col4_short, col8_short],
                          var_name='KPI Type', 
-                         value_name='Achievement %')    # Using seaborn barplot with grouped bars
+                         value_name='Achievement %')
+    
+    # Using seaborn barplot with grouped bars
     bars = sns.barplot(x='Category', y='Achievement %', hue='KPI Type', 
                       data=kpi_melted, 
                       palette=['#ff7f0e', '#ff9e4a'], 
-                      ax=ax)
+                      ax=ax, width=0.7)
 
     ax.set_title(f'KPI Performance by {name} CAP LRM', pad=20)
     ax.set_xlabel(f'{name}', labelpad=15)
-    ax.set_ylabel('Achievement %', labelpad=15)    # Adding value labels on top of each bar with larger font size
+    ax.set_ylabel('Achievement %', labelpad=15)    # Adding value labels with staggered positioning and improved formatting to avoid overlap
     for container_idx, container in enumerate(ax.containers):
         labels = []
         for bar in container:
             height = bar.get_height()
-            labels.append(f'{height:.2f}%')
-        ax.bar_label(container, labels=labels, padding=10, fontsize=14, fontweight='bold')
+            # Format with no decimal places now that we've multiplied by 100
+            labels.append(f'{height:.0f}%')
+            
+        # Use different padding for alternating container groups
+        padding = 8 if container_idx % 2 == 0 else 18
+        ax.bar_label(container, labels=labels, padding=padding, fontsize=13, fontweight='bold')
+        
+        # For second container, adjust y-position of labels by manually adding text
+        if container_idx % 2 != 0:
+            for j, bar in enumerate(container):
+                # Create additional text objects at different positions
+                height = bar.get_height()
+                ax.text(bar.get_x() + bar.get_width()/2, height + 5, 
+                        labels[j], ha='center', fontsize=13, fontweight='bold')
 
     # Enhance grid for better readability
     ax.grid(axis='y', linestyle='--', alpha=0.7)
@@ -198,6 +236,10 @@ def create_kpi_performance_chart(df, name):
     # Adjust legend with better styling
     legend = ax.legend(title='Performance Metric', fontsize=14)
     plt.setp(legend.get_title(), fontsize=16, fontweight='bold')
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
     
     # Rotate x-axis labels for Education dashboard
     if name == "Education":
@@ -211,22 +253,53 @@ def create_kpi_performance_chart(df, name):
 
 # Helper function to setup consistent chart styling
 def setup_chart_style():
-    """Set up consistent styling for all charts."""
-    # Set global font size and weight
+    """Set up consistent styling for all charts with executive-level polish."""
+    # Set global font size and weight - make everything bolder and more professional
     plt.rcParams.update({
         'font.size': 14,
         'font.weight': 'bold',
-        'axes.titlesize': 18,
+        'axes.titlesize': 20,
         'axes.titleweight': 'bold',
         'axes.labelsize': 16,
         'axes.labelweight': 'bold',
         'xtick.labelsize': 14,
-        'ytick.labelsize': 14
+        'ytick.labelsize': 14,
+        'figure.constrained_layout.use': True,  # Use constrained layout for better spacing
+        'axes.grid': True,
+        'grid.alpha': 0.3,
+        'axes.spines.top': False,
+        'axes.spines.right': False,
+        'axes.edgecolor': '#333333',
+        'axes.linewidth': 1.5,
+        'figure.facecolor': '#ffffff',
+        'axes.facecolor': '#f9f9f9',
     })
     
-    # Create larger figure
-    fig, ax = plt.subplots(figsize=(14, 9))
+    # Create figure with consistent size for all charts
+    # Using a fixed aspect ratio to ensure all charts have the same height
+    fig, ax = plt.subplots(figsize=(12, 8), dpi=120)  # Increased DPI for sharper images
+    
+    # Set figure face color to white for better appearance
+    fig.set_facecolor('white')
+    
+    # Adjust the bottom margin to create more space for x-axis labels
+    plt.subplots_adjust(bottom=0.15)
+    
+    # Add a subtle background color to enhance readability
+    ax.set_facecolor('#f9f9f9')
+    
+    # Add a border to the figure for a more polished look
+    fig.patch.set_edgecolor('#e0e0e0')
+    fig.patch.set_linewidth(2)
+    
     return fig, ax
+
+def extend_y_limits(ax, top_extension=0.2):
+    """Extend the y-axis limits to add more room at the top for labels."""
+    y_min, y_max = ax.get_ylim()
+    y_range = y_max - y_min
+    ax.set_ylim(y_min, y_max + y_range * top_extension)
+    return ax
 
 def create_performance_multiple_chart(df, name):
     """Create the performance multiple chart."""
@@ -252,21 +325,25 @@ def create_performance_multiple_chart(df, name):
                           id_vars=['Category'], 
                           value_vars=[col7_short, col11_short],
                           var_name='Performance Type', 
-                          value_name='Multiple')    # Using seaborn barplot with grouped bars
+                          value_name='Multiple')    
+    
+    # Using seaborn barplot with grouped bars
     bars = sns.barplot(x='Category', y='Multiple', hue='Performance Type', 
                       data=perf_melted, 
                       palette=['#2ca02c', '#98df8a'], 
-                      ax=ax)
+                      ax=ax, width=0.7)
 
     ax.set_title(f'Performance Multiple by {name}', pad=20)
     ax.set_xlabel(f'{name}', labelpad=15)
-    ax.set_ylabel('Multiple Value', labelpad=15)    # Adding value labels on top of each bar with larger font size
+    ax.set_ylabel('Multiple Value', labelpad=15)    # Adding value labels with staggered positioning to avoid overlap
     for container_idx, container in enumerate(ax.containers):
         labels = []
         for bar in container:
             height = bar.get_height()
             labels.append(f'{height:.1f}x')
-        ax.bar_label(container, labels=labels, padding=10, fontsize=14, fontweight='bold')
+        # Staggered padding for alternating container groups
+        padding = 8 if container_idx % 2 == 0 else 18
+        ax.bar_label(container, labels=labels, padding=padding, fontsize=13, fontweight='bold')
 
     # Enhance grid for better readability
     ax.grid(axis='y', linestyle='--', alpha=0.7)
@@ -274,6 +351,10 @@ def create_performance_multiple_chart(df, name):
     # Adjust legend with better styling
     legend = ax.legend(title='Multiple Type', fontsize=14)
     plt.setp(legend.get_title(), fontsize=16, fontweight='bold')
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
     
     # Rotate x-axis labels for Education dashboard
     if name == "Education":
@@ -333,11 +414,13 @@ def create_top_bottom_performers_chart(df, name):
     bottom_performers = bottom_performers.reset_index(drop=True)
 
     # Combine both datasets
-    all_performers = pd.concat([top_performers, bottom_performers], ignore_index=True)    # Using seaborn barplot with grouped bars with enhanced colors
+    all_performers = pd.concat([top_performers, bottom_performers], ignore_index=True)    
+    
+    # Using seaborn barplot with grouped bars with enhanced colors
     bars = sns.barplot(x='Category', y='Value', hue='Performance', 
                       data=all_performers, 
                       palette=['#9467bd', '#d8b2ff'],
-                      ax=ax)
+                      ax=ax, width=0.7)
 
     ax.set_title(f'Top vs Bottom Performers by {name}', pad=20)
     ax.set_xlabel(f'{name}', labelpad=15)
@@ -351,6 +434,10 @@ def create_top_bottom_performers_chart(df, name):
     # Adjust legend with better styling
     legend = ax.legend(title='Performance Group', fontsize=14)
     plt.setp(legend.get_title(), fontsize=16, fontweight='bold')
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
     
     # Rotate x-axis labels for Education dashboard
     if name == "Education":
@@ -364,7 +451,7 @@ def create_top_bottom_performers_chart(df, name):
 
 def create_time_to_first_sale_chart(df, name):
     """Create the time to first sale chart."""
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = setup_chart_style()
     
     # Get the 12th column (index 11)
     col12 = df.columns[11]
@@ -375,21 +462,27 @@ def create_time_to_first_sale_chart(df, name):
         'Time to First Sale': df[col12]
     })
 
-    # Using seaborn barplot (fixed deprecation warning)
+    # Using seaborn barplot (fixed deprecation warning)    
     # Generate a palette with enough colors for all categories
     category_count = len(first_sale_data['Category'].unique())
     palette = sns.color_palette("Blues_d", category_count)
     
     bars = sns.barplot(x='Category', y='Time to First Sale', data=first_sale_data, 
-                      hue='Category', palette=palette, legend=False, ax=ax)
+                     hue='Category', palette=palette, legend=False, ax=ax, width=0.7)
 
-    ax.set_title(f'Time to Make First Sale by {name}')
-    ax.set_xlabel(f'{name}')
-    ax.set_ylabel('Time (months)')
+    ax.set_title(f'Time to Make First Sale by {name}', pad=20)
+    ax.set_xlabel(f'{name}', labelpad=15)
+    ax.set_ylabel('Time (months)', labelpad=15)
 
-    # Adding value labels on top of each bar
-    for container in ax.containers:
-        ax.bar_label(container, fmt='%.2f months', padding=5)
+    # Adding value labels inside each bar
+    for i, container in enumerate(ax.containers):
+        for j, bar in enumerate(container):
+            height = bar.get_height()
+            if height >= 0.5:  # Only add text if bar is tall enough
+                ax.text(bar.get_x() + bar.get_width()/2, height/2,
+                        f'{height:.2f}',
+                        ha='center', va='center',
+                        color='white', fontweight='bold', fontsize=12)
 
     # Add a horizontal line for the average
     avg_time = df[col12].mean()
@@ -397,16 +490,26 @@ def create_time_to_first_sale_chart(df, name):
     ax.text(ax.get_xlim()[1] * 0.6, avg_time * 1.02, f'Avg: {avg_time:.2f} months', 
             color='red', ha='center', va='bottom')
     
+    # Enhance grid for better readability
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+    
     # Rotate x-axis labels for Education dashboard
     if name == "Education":
         plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
         
-    plt.tight_layout()
-    st.pyplot(fig)
+    # Add more padding around figure
+    plt.tight_layout(pad=3.0)
+    
+    # Use full width in Streamlit
+    st.pyplot(fig, use_container_width=True)
 
 def create_car2catpo_ratio_chart(df, name):
     """Create the CAR2CATPO ratio chart."""
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = setup_chart_style()
     
     # Get the 13th column (index 12)
     col13 = df.columns[12]
@@ -420,18 +523,23 @@ def create_car2catpo_ratio_chart(df, name):
     # Using seaborn barplot (fixed deprecation warning)
     # Generate a palette with enough colors for all categories
     category_count = len(ratio_data['Category'].unique())
-    palette = sns.color_palette("Greens_d", category_count)
-    
+    palette = sns.color_palette("Greens_d", category_count)    
     bars = sns.barplot(x='Category', y='CAR2CATPO Ratio', data=ratio_data, 
-                      hue='Category', palette=palette, legend=False, ax=ax)
+                      hue='Category', palette=palette, legend=False, ax=ax, width=0.7)
 
-    ax.set_title(f'CAR2CATPO Ratio by {name}')
-    ax.set_xlabel(f'{name}')
-    ax.set_ylabel('Ratio Value')
+    ax.set_title(f'CAR2CATPO Ratio by {name}', pad=20)
+    ax.set_xlabel(f'{name}', labelpad=15)
+    ax.set_ylabel('Ratio Value', labelpad=15)
 
-    # Adding value labels on top of each bar
-    for container in ax.containers:
-        ax.bar_label(container, fmt='%.2f', padding=5)
+    # Adding value labels inside the bars
+    for i, container in enumerate(ax.containers):
+        for j, bar in enumerate(container):
+            height = bar.get_height()
+            if height >= 0.3:  # Only add text if bar is tall enough
+                ax.text(bar.get_x() + bar.get_width()/2, height/2,
+                        f'{height:.2f}',
+                        ha='center', va='center',
+                        color='white', fontweight='bold', fontsize=12)
 
     # Add a horizontal line for the average
     avg_ratio = df[col13].mean()
@@ -439,16 +547,26 @@ def create_car2catpo_ratio_chart(df, name):
     ax.text(ax.get_xlim()[1] * 0.6, avg_ratio * 1.02, f'Avg: {avg_ratio:.2f}', 
             color='red', ha='center', va='bottom')
     
+    # Enhance grid for better readability
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+    
     # Rotate x-axis labels for Education dashboard
     if name == "Education":
         plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
         
-    plt.tight_layout()
-    st.pyplot(fig)
+    # Add more padding around figure
+    plt.tight_layout(pad=3.0)
+    
+    # Use full width in Streamlit
+    st.pyplot(fig, use_container_width=True)
 
 def create_attrition_count_chart(df, name):
     """Create the attrition count chart."""
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = setup_chart_style()
     
     # Get the 14th column (index 13)
     col14 = df.columns[13]
@@ -465,11 +583,11 @@ def create_attrition_count_chart(df, name):
     palette = sns.color_palette("Reds_d", category_count)
     
     bars = sns.barplot(x='Category', y='Attrited Employees', data=attrition_data, 
-                      hue='Category', palette=palette, legend=False, ax=ax)
+                     hue='Category', palette=palette, legend=False, ax=ax, width=0.7)
 
-    ax.set_title(f'Employee Attrition by {name}')
-    ax.set_xlabel(f'{name}')
-    ax.set_ylabel('Number of Attrited Employees')
+    ax.set_title(f'Employee Attrition by {name}', pad=20)
+    ax.set_xlabel(f'{name}', labelpad=15)
+    ax.set_ylabel('Number of Attrited Employees', labelpad=15)
 
     # Adding value labels on top of each bar
     for container in ax.containers:
@@ -480,21 +598,33 @@ def create_attrition_count_chart(df, name):
     attrition_per_category = df[col14].values
     attrition_rates = attrition_per_category / total_per_category * 100
 
-    # Add percentage annotations
-    for ann_idx, (count, rate) in enumerate(zip(attrition_per_category, attrition_rates)):
-        ax.text(ann_idx, count/2, f'{rate:.1f}%', 
-                ha='center', va='center', color='white', fontweight='bold')
-    
+    # Add percentage annotations inside the bars with improved visibility
+    for i, (count, rate) in enumerate(zip(attrition_per_category, attrition_rates)):
+        if count >= 2:  # Only add text if bar is tall enough
+            ax.text(i, count/2, f'{rate:.1f}%', 
+                    ha='center', va='center', color='white', 
+                    fontweight='bold', fontsize=12)
+                    
+    # Enhance grid for better readability
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+
     # Rotate x-axis labels for Education dashboard
     if name == "Education":
         plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
         
-    plt.tight_layout()
-    st.pyplot(fig)
+    # Add more padding around figure
+    plt.tight_layout(pad=3.0)
+    
+    # Use full width in Streamlit
+    st.pyplot(fig, use_container_width=True)
 
 def create_average_residency_chart(df, name):
     """Create the average residency chart."""
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = setup_chart_style()
     
     # Get the 15th and 16th columns (indices 14 and 15)
     col15 = df.columns[14]  # Average Residency of all employees
@@ -526,19 +656,21 @@ def create_average_residency_chart(df, name):
     bars = sns.barplot(x='Category', y='Average Residency', hue='Employee Group', 
                       data=residency_melted, 
                       palette=['#4472C4', '#8FAADC'], 
-                      ax=ax)
+                      ax=ax, width=0.7)
 
-    ax.set_title(f'Employment Tenure by {name}')
-    ax.set_xlabel(f'{name}')
-    ax.set_ylabel('Average Tenure (months)')
+    ax.set_title(f'Employment Tenure by {name}', pad=20)
+    ax.set_xlabel(f'{name}', labelpad=15)
+    ax.set_ylabel('Average Tenure (months)', labelpad=15)
 
-    # Adding value labels on top of each bar
+    # Adding value labels inside each bar
     for container_idx, container in enumerate(ax.containers):
-        labels = []
         for bar_idx, bar in enumerate(container):
             height = bar.get_height()
-            labels.append(f'{height:.2f}')
-        ax.bar_label(container, labels=labels, padding=5)
+            if height >= 1.0:  # Only add text if bar is tall enough
+                ax.text(bar.get_x() + bar.get_width()/2, height/2,
+                        f'{height:.2f}',
+                        ha='center', va='center',
+                        color='white', fontweight='bold', fontsize=10)
 
     # Add horizontal line for overall average tenure for all employees
     overall_avg = df[col15].mean()
@@ -546,19 +678,29 @@ def create_average_residency_chart(df, name):
     ax.text(ax.get_xlim()[1] * 0.7, overall_avg * 0.95, f'Org avg: {overall_avg:.2f}', 
             color='red', ha='center', va='bottom', fontsize=9)
 
+    # Enhance grid for better readability
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+
     # Adjust legend with better positioning
     ax.legend(title='Employee Group', loc='upper right')
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
     
     # Rotate x-axis labels for Education dashboard
     if name == "Education":
         plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
         
-    plt.tight_layout()
-    st.pyplot(fig)
+    # Add more padding around figure
+    plt.tight_layout(pad=3.0)
+    
+    # Use full width in Streamlit
+    st.pyplot(fig, use_container_width=True)
 
 def create_infant_attrition_chart(df, name):
     """Create the infant attrition chart."""
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = setup_chart_style()
     
     # Get the last column (index 17)
     last_col = df.columns[-1]  # Using -1 to access the last column
@@ -572,18 +714,23 @@ def create_infant_attrition_chart(df, name):
     # Using seaborn barplot (fixed deprecation warning)
     # Generate a palette with enough colors for all categories
     category_count = len(infant_attrition_data['Category'].unique())
-    palette = sns.color_palette("Blues_d", category_count)
-    
+    palette = sns.color_palette("Blues_d", category_count)    
     bars = sns.barplot(x='Category', y='Infant Attrition', data=infant_attrition_data, 
-                      hue='Category', palette=palette, legend=False, ax=ax)
+                      hue='Category', palette=palette, legend=False, ax=ax, width=0.7)
 
-    ax.set_title(f'Infant Attrition Rate by {name}')
-    ax.set_xlabel(f'{name}')
-    ax.set_ylabel('Attrition Rate (%)')
+    ax.set_title(f'Infant Attrition Rate by {name}', pad=20)
+    ax.set_xlabel(f'{name}', labelpad=15)
+    ax.set_ylabel('Attrition Rate (%)', labelpad=15)
 
-    # Adding value labels on top of each bar
-    for container in ax.containers:
-        ax.bar_label(container, fmt='%.1f%%', padding=5)
+    # Adding value labels inside the bars
+    for i, container in enumerate(ax.containers):
+        for j, bar in enumerate(container):
+            height = bar.get_height()
+            if height >= 2.0:  # Only add text if bar is tall enough
+                ax.text(bar.get_x() + bar.get_width()/2, height/2,
+                        f'{height:.1f}',
+                        ha='center', va='center',
+                        color='white', fontweight='bold', fontsize=12)
 
     # Add a horizontal line for the average
     avg_attrition = infant_attrition_data['Infant Attrition'].mean()
@@ -591,12 +738,22 @@ def create_infant_attrition_chart(df, name):
     ax.text(ax.get_xlim()[1] * 0.6, avg_attrition * 1.02, f'Avg: {avg_attrition:.1f}%', 
             color='red', ha='center', va='bottom')
     
+    # Enhance grid for better readability
+    ax.grid(axis='y', linestyle='--', alpha=0.7)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+    # Extend y-axis to provide more space for labels
+    extend_y_limits(ax, 0.2)
+    
     # Rotate x-axis labels for Education dashboard
     if name == "Education":
         plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
         
-    plt.tight_layout()
-    st.pyplot(fig)
+    # Add more padding around figure
+    plt.tight_layout(pad=3.0)
+    
+    # Use full width in Streamlit
+    st.pyplot(fig, use_container_width=True)
 
 if __name__ == "__main__":
     main()
