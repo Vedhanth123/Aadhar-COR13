@@ -7,14 +7,13 @@ import sys
 
 # Set seaborn style
 sns.set_theme(style="whitegrid")
-
 def main():    # Set page configuration
     st.set_page_config(
         page_title="Aadhar Analysis Dashboard",
         page_icon="📊",
         layout="wide"
     )
-      st.markdown("""
+    st.markdown("""
         <div style='text-align: center; margin-bottom: 40px;'>
             <h1 style='font-weight: 800; color: #0047AB; font-size: 46px; margin-bottom: 10px; text-shadow: 1px 1px 3px rgba(0,0,0,0.2);'>
                 Aadhar Analysis Dashboard
@@ -25,7 +24,8 @@ def main():    # Set page configuration
     """, unsafe_allow_html=True)
       # Load all dataframes
     with st.spinner('Loading data from Aadhar_modified.xlsx...'):
-        try:            st.info("Loading data from Excel file. This may take a moment...")
+        try:            
+            st.info("Loading data from Excel file. This may take a moment...")
             Gender = pd.read_excel('Aadhar_modified.xlsx', sheet_name='Gender')
             Education = pd.read_excel('Aadhar_modified.xlsx', sheet_name='Education')
             Experience = pd.read_excel('Aadhar_modified.xlsx', sheet_name='Experience')
