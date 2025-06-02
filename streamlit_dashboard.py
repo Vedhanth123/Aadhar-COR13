@@ -17,7 +17,14 @@ def load_data():
             Education = pd.read_excel('Aadhar_modified.xlsx', sheet_name='Education')
             Experience = pd.read_excel('Aadhar_modified.xlsx', sheet_name='Experience')
             Age = pd.read_excel('Aadhar_modified.xlsx', sheet_name='Age')
-            return Gender, Education, Experience, Age
+            
+            # Try to load the Zone sheet if it exists
+            try:
+                Zone = pd.read_excel('Aadhar_modified.xlsx', sheet_name='Zone')
+                return Gender, Education, Experience, Age, Zone
+            except Exception:
+                # Zone sheet doesn't exist yet
+                return Gender, Education, Experience, Age
         except FileNotFoundError:
             st.error("The file Aadhar_modified.xlsx was not found.")
             st.stop()
@@ -35,19 +42,34 @@ def main():
     st.title('Aadhar Analysis Dashboard')
     
     # Load all dataframes
-    Gender, Education, Experience, Age = load_data()
+    data_frames = load_data()
     
-    # Create list of dataframes with their display names
-    all_dataframes = [
-        {"df": Gender, "name": "Gender"},
-        {"df": Education, "name": "Education"},
-        {"df": Experience, "name": "Experience"},
-        {"df": Age, "name": "Age"}
-    ]
-    
-    # Create tabs for each category
-    tabs = st.tabs(["Gender", "Education", "Experience", "Age"])
-      # Generate dashboard for each tab
+    # Check if Zone data was loaded
+    if len(data_frames) == 5:
+        Gender, Education, Experience, Age, Zone = data_frames
+        # Create list of dataframes with their display names
+        all_dataframes = [
+            {"df": Gender, "name": "Gender"},
+            {"df": Education, "name": "Education"},
+            {"df": Experience, "name": "Experience"},
+            {"df": Age, "name": "Age"},
+            {"df": Zone, "name": "Zone"}
+        ]
+        # Create tabs for each category
+        tabs = st.tabs(["Gender", "Education", "Experience", "Age", "Zone"])
+    else:
+        Gender, Education, Experience, Age = data_frames
+        # Create list of dataframes with their display names
+        all_dataframes = [
+            {"df": Gender, "name": "Gender"},
+            {"df": Education, "name": "Education"},
+            {"df": Experience, "name": "Experience"},
+            {"df": Age, "name": "Age"}
+        ]
+        # Create tabs for each category
+        tabs = st.tabs(["Gender", "Education", "Experience", "Age"])
+      
+    # Generate dashboard for each tab
     for i, data in enumerate(all_dataframes):
         with tabs[i]:
             try:
@@ -61,6 +83,33 @@ def main():
 def create_dashboard(df, name):
     """Create a dashboard visualization for the given dataframe in Streamlit."""
     st.header(f'{name} Analysis Dashboard')
+    
+    # Add zone selection if the Zone category is selected
+    filtered_df = df.copy()
+    if name == "Zone":
+        st.markdown("<div style='background-color: #e1f5fe; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #81d4fa;'>", unsafe_allow_html=True)
+        st.markdown("<h3 style='color: #0277bd;'>📍 Zone Selection</h3>", unsafe_allow_html=True)
+        
+        # Get unique zones
+        all_zones = sorted(df['Category'].unique())
+        
+        # Allow the user to select zones
+        selected_zones = st.multiselect(
+            'Select zones to compare:',
+            options=all_zones,
+            default=all_zones[:3] if len(all_zones) > 3 else all_zones,  # Default to first 3 zones or all if fewer
+            help="Select up to 10 zones to compare in the charts"
+        )
+        
+        # Filter the dataframe based on selected zones
+        if selected_zones:
+            filtered_df = df[df['Category'].isin(selected_zones)]
+            st.success(f"Showing data for {len(selected_zones)} selected zones")
+        else:
+            st.warning("Please select at least one zone to display data")
+            return
+            
+        st.markdown("</div>", unsafe_allow_html=True)
     
     # Set optimal figure size for the charts
     plt.rcParams['figure.figsize'] = [8, 5]  # Slightly smaller to load faster
@@ -76,9 +125,9 @@ def create_dashboard(df, name):
         fig, ax = plt.subplots(figsize=(10, 6))
         
         # Extract the first 3 columns
-        first_cols = df.columns[:3]
+        first_cols = filtered_df.columns[:3]
         # Reshape data for seaborn
-        df_melted = pd.melt(df, 
+        df_melted = pd.melt(filtered_df, 
                             id_vars=[first_cols[0]], 
                             value_vars=[first_cols[1], first_cols[2]], 
                             var_name='Metric', 
@@ -86,7 +135,7 @@ def create_dashboard(df, name):
 
         # Calculate percentages for each cohort
         for metric in [first_cols[1], first_cols[2]]:
-            total = df[metric].sum()
+            total = filtered_df[metric].sum()
             df_melted.loc[df_melted['Metric'] == metric, 'Percentage'] = df_melted.loc[df_melted['Metric'] == metric, 'Count'] / total * 100
 
         # Using seaborn barplot with grouped bars
@@ -124,8 +173,8 @@ def create_dashboard(df, name):
         fig, ax = plt.subplots(figsize=(10, 6))
         
         # Get the 4th and 8th columns (indices 3 and 7)
-        col4 = df.columns[3]
-        col8 = df.columns[7]
+        col4 = filtered_df.columns[3]
+        col8 = filtered_df.columns[7]
 
         # Create shorter column names for display
         col4_short = "Cumulative Combined KPI"
@@ -133,9 +182,9 @@ def create_dashboard(df, name):
 
         # Create a DataFrame with the data and specified columns
         kpi_data = pd.DataFrame({
-            'Category': df['Category'],
-            col4_short: df[col4],
-            col8_short: df[col8]
+            'Category': filtered_df['Category'],
+            col4_short: filtered_df[col4],
+            col8_short: filtered_df[col8]
         })
 
         # Reshape data for seaborn
@@ -179,8 +228,8 @@ def create_dashboard(df, name):
         fig, ax = plt.subplots(figsize=(10, 6))
         
         # Get the 7th and 11th columns (indices 6 and 10)
-        col7 = df.columns[6]
-        col11 = df.columns[10]
+        col7 = filtered_df.columns[6]
+        col11 = filtered_df.columns[10]
 
         # Create shorter column names for display
         col7_short = "Performance Multiple KPI Combined"
@@ -188,9 +237,9 @@ def create_dashboard(df, name):
 
         # Create a DataFrame with the data and specified columns
         perf_data = pd.DataFrame({
-            'Category': df['Category'],
-            col7_short: df[col7],
-            col11_short: df[col11]
+            'Category': filtered_df['Category'],
+            col7_short: filtered_df[col7],
+            col11_short: filtered_df[col11]
         })
 
         # Reshape data for seaborn
@@ -238,10 +287,10 @@ def create_dashboard(df, name):
         fig, ax = plt.subplots(figsize=(10, 6))
         
         # Get the 5th, 6th, 9th and 10th columns (indices 4, 5, 8, 9)
-        col5 = df.columns[4]  # Top performers Combined KPI
-        col6 = df.columns[5]  # Bottom performers Combined KPI
-        col9 = df.columns[8]  # Top performers KPI 1
-        col10 = df.columns[9]  # Bottom performers KPI 1
+        col5 = filtered_df.columns[4]  # Top performers Combined KPI
+        col6 = filtered_df.columns[5]  # Bottom performers Combined KPI
+        col9 = filtered_df.columns[8]  # Top performers KPI 1
+        col10 = filtered_df.columns[9]  # Bottom performers KPI 1
 
         # Create shorter column names for display
         col5_short = "Top 10% (Combined)"
@@ -251,11 +300,11 @@ def create_dashboard(df, name):
 
         # Create a DataFrame with the data and specified columns
         performer_data = pd.DataFrame({
-            'Category': df['Category'],
-            col5_short: df[col5],
-            col6_short: df[col6],
-            col9_short: df[col9],
-            col10_short: df[col10]
+            'Category': filtered_df['Category'],
+            col5_short: filtered_df[col5],
+            col6_short: filtered_df[col6],
+            col9_short: filtered_df[col9],
+            col10_short: filtered_df[col10]
         })
 
         # Reshape data for seaborn - first combine top performers
@@ -313,12 +362,12 @@ def create_dashboard(df, name):
         fig, ax = plt.subplots(figsize=(10, 6))
         
         # Get the 12th column (index 11)
-        col12 = df.columns[11]
+        col12 = filtered_df.columns[11]
 
         # Create a DataFrame for the chart
         first_sale_data = pd.DataFrame({
-            'Category': df['Category'],
-            'Time to First Sale': df[col12]
+            'Category': filtered_df['Category'],
+            'Time to First Sale': filtered_df[col12]
         })
 
         # Using seaborn barplot (fixed deprecation warning)
@@ -338,7 +387,7 @@ def create_dashboard(df, name):
             ax.bar_label(container, fmt='%.2f months', padding=5)
 
         # Add a horizontal line for the average
-        avg_time = df[col12].mean()
+        avg_time = filtered_df[col12].mean()
         ax.axhline(y=avg_time, color='red', linestyle='--', alpha=0.7)
         ax.text(ax.get_xlim()[1] * 0.6, avg_time * 1.02, f'Avg: {avg_time:.2f} months', 
                 color='red', ha='center', va='bottom')
@@ -356,12 +405,12 @@ def create_dashboard(df, name):
         fig, ax = plt.subplots(figsize=(10, 6))
         
         # Get the 13th column (index 12)
-        col13 = df.columns[12]
+        col13 = filtered_df.columns[12]
 
         # Create a DataFrame for the chart
         ratio_data = pd.DataFrame({
-            'Category': df['Category'],
-            'CAR2CATPO Ratio': df[col13]
+            'Category': filtered_df['Category'],
+            'CAR2CATPO Ratio': filtered_df[col13]
         })
 
         # Using seaborn barplot (fixed deprecation warning)
@@ -381,7 +430,7 @@ def create_dashboard(df, name):
             ax.bar_label(container, fmt='%.2f', padding=5)
 
         # Add a horizontal line for the average
-        avg_ratio = df[col13].mean()
+        avg_ratio = filtered_df[col13].mean()
         ax.axhline(y=avg_ratio, color='red', linestyle='--', alpha=0.7)
         ax.text(ax.get_xlim()[1] * 0.6, avg_ratio * 1.02, f'Avg: {avg_ratio:.2f}', 
                 color='red', ha='center', va='bottom')
@@ -403,12 +452,12 @@ def create_dashboard(df, name):
         fig, ax = plt.subplots(figsize=(10, 6))
         
         # Get the 14th column (index 13)
-        col14 = df.columns[13]
+        col14 = filtered_df.columns[13]
 
         # Create a DataFrame for the chart
         attrition_data = pd.DataFrame({
-            'Category': df['Category'],
-            'Attrited Employees': df[col14]
+            'Category': filtered_df['Category'],
+            'Attrited Employees': filtered_df[col14]
         })
 
         # Using seaborn barplot (fixed deprecation warning)
@@ -428,8 +477,8 @@ def create_dashboard(df, name):
             ax.bar_label(container, fmt='%d', padding=5)
 
         # Calculate and display attrition percentages
-        total_per_category = df['CAP LRM cohort'].values
-        attrition_per_category = df[col14].values
+        total_per_category = filtered_df['CAP LRM cohort'].values
+        attrition_per_category = filtered_df[col14].values
         attrition_rates = attrition_per_category / total_per_category * 100
 
         # Add percentage annotations
@@ -450,8 +499,8 @@ def create_dashboard(df, name):
         fig, ax = plt.subplots(figsize=(10, 6))
         
         # Get the 15th and 16th columns (indices 14 and 15)
-        col15 = df.columns[14]  # Average Residency of all employees
-        col16 = df.columns[15]  # Average Residency of TOP 100 employees
+        col15 = filtered_df.columns[14]  # Average Residency of all employees
+        col16 = filtered_df.columns[15]  # Average Residency of TOP 100 employees
 
         # Create shorter column names for display
         col15_short = "All Employees"
@@ -459,9 +508,9 @@ def create_dashboard(df, name):
 
         # Create a DataFrame for the chart
         residency_data = pd.DataFrame({
-            'Category': df['Category'],
-            col15_short: df[col15],
-            col16_short: df[col16]
+            'Category': filtered_df['Category'],
+            col15_short: filtered_df[col15],
+            col16_short: filtered_df[col16]
         })
 
         # Calculate the percentage differences between Top 100 and All employees
@@ -494,7 +543,7 @@ def create_dashboard(df, name):
             ax.bar_label(container, labels=labels, padding=5)
 
         # Add horizontal line for overall average tenure for all employees
-        overall_avg = df[col15].mean()
+        overall_avg = filtered_df[col15].mean()
         ax.axhline(y=overall_avg, color='red', linestyle='--', alpha=0.7)
         ax.text(ax.get_xlim()[1] * 0.7, overall_avg * 0.95, f'Org avg: {overall_avg:.2f}', 
                 color='red', ha='center', va='bottom', fontsize=9)
@@ -551,12 +600,12 @@ def create_dashboard(df, name):
         fig, ax = plt.subplots(figsize=(10, 6))
         
         # Get the last column (index 17)
-        last_col = df.columns[-1]  # Using -1 to access the last column
+        last_col = filtered_df.columns[-1]  # Using -1 to access the last column
 
         # Create a DataFrame for the chart with a shorter column name for display
         infant_attrition_data = pd.DataFrame({
-            'Category': df['Category'],
-            'Infant Attrition': df[last_col] * 100  # Convert to percentage
+            'Category': filtered_df['Category'],
+            'Infant Attrition': filtered_df[last_col] * 100  # Convert to percentage
         })
 
         # Using seaborn barplot (fixed deprecation warning)
