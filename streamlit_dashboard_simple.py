@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import sys
+from recommendation_storage import init_recommendations, save_recommendation, export_recommendations, import_recommendations
 
 # Set seaborn style
 sns.set_theme(style="whitegrid")
@@ -13,6 +14,10 @@ def main():    # Set page configuration
         page_icon="📊",
         layout="wide"
     )
+    
+    # Initialize session state for storing recommendations from persistent storage
+    init_recommendations()
+    
     st.markdown("""
         <div style='text-align: center; margin-bottom: 40px;'>
             <h1 style='font-weight: 800; color: #0047AB; font-size: 46px; margin-bottom: 10px; text-shadow: 1px 1px 3px rgba(0,0,0,0.2);'>
@@ -86,6 +91,25 @@ def main():    # Set page configuration
 def create_dashboard(df, name):
     """Create a dashboard visualization for the given dataframe in Streamlit."""
     st.markdown(f"<h1 style='text-align: center; font-weight: 800; color: #0A2472; margin-bottom: 20px; text-shadow: 1px 1px 2px #ccc;'>{name} Analysis Dashboard</h1>", unsafe_allow_html=True)
+    
+    # Add export recommendations functionality
+    with st.expander("Export/Import Recommendations"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Export button - save recommendations to file
+            if st.button("Export All Recommendations"):
+                filename = export_recommendations(name)
+                if filename:
+                    st.success(f"Recommendations exported to {filename}")
+        
+        with col2:
+            # Import button - load recommendations from file
+            uploaded_file = st.file_uploader("Import recommendations from JSON", type="json")
+            if uploaded_file is not None:
+                if import_recommendations(uploaded_file.getvalue().decode('utf-8')):
+                    st.success("Recommendations imported successfully!")
+                    st.rerun()  # Refresh the UI to show imported recommendations
     
     # Show information about the data with improved styling
     st.markdown(f"<h3 style='text-align: center; color: #444; background-color: #f8f9fa; padding: 10px; border-radius: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>Executive Dashboard • {len(df)} Data Points</h3>", unsafe_allow_html=True)
@@ -167,14 +191,36 @@ def create_dashboard(df, name):
                                     <div style='padding: 10px 0;'>
                             """, unsafe_allow_html=True)
                             # Call the chart function that returns insights
-                            chart, insights = chart_functions[chart_name](filtered_df, name)
+                            chart, auto_insights = chart_functions[chart_name](filtered_df, name)
                             
-                            # Add the insight text below the chart
+                            # Create a unique key for each text input based on category and chart
+                            input_key = f"{name}_{chart_name}_recommendation"
+                            
+                            # Initialize session state for this recommendation if it doesn't exist
+                            if input_key not in st.session_state:
+                                st.session_state[input_key] = auto_insights
+                            
+                            # Add text area for custom recommendations
+                            st.markdown("<h4 style='margin: 10px 15px 5px 15px; color: #444;'>Your Recommendation:</h4>", unsafe_allow_html=True)
+                            custom_insight = st.text_area(
+                                "Enter your custom recommendation:",
+                                value=st.session_state.get(input_key, auto_insights),
+                                height=100,
+                                key=f"textarea_{input_key}",
+                                label_visibility="collapsed"
+                            )
+                            
+                            # Save button for the recommendation
+                            if st.button("Save Recommendation", key=f"save_{input_key}"):
+                                save_recommendation(input_key, custom_insight)
+                                st.success("Recommendation saved and will persist between sessions!")
+                            
+                            # Display the saved recommendation
                             st.markdown(f"""
                                 <div style='padding: 10px 15px; background-color: #f8f9fa; border-top: 1px solid #e0e0e0; 
                                 margin-top: 5px; font-size: 14px; color: #333; border-radius: 0 0 8px 8px;'>
                                     <strong>Key Insights:</strong><br>
-                                    {insights}
+                                    {st.session_state.get(input_key, auto_insights)}
                                 </div>
                             """, unsafe_allow_html=True)
                             

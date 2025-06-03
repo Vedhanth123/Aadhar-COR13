@@ -5,6 +5,7 @@ import pandas as pd
 import seaborn as sns
 import sys
 from datetime import datetime
+from recommendation_storage import init_recommendations, save_recommendation, export_recommendations, import_recommendations
 
 # Set seaborn style
 sns.set_theme(style="whitegrid")
@@ -39,6 +40,10 @@ def main():
         page_title="Aadhar Analysis Dashboard",
         page_icon="📊"
     )
+    
+    # Initialize session state for storing recommendations from persistent storage
+    init_recommendations()
+        
     st.title('Aadhar Analysis Dashboard')
     
     # Load all dataframes
@@ -83,6 +88,25 @@ def main():
 def create_dashboard(df, name):
     """Create a dashboard visualization for the given dataframe in Streamlit."""
     st.header(f'{name} Analysis Dashboard')
+    
+    # Add export recommendations functionality
+    with st.expander("Export/Import Recommendations"):
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Export button - save recommendations to file
+            if st.button("Export All Recommendations"):
+                filename = export_recommendations(name)
+                if filename:
+                    st.success(f"Recommendations exported to {filename}")
+        
+        with col2:
+            # Import button - load recommendations from file
+            uploaded_file = st.file_uploader("Import recommendations from JSON", type="json")
+            if uploaded_file is not None:
+                if import_recommendations(uploaded_file.getvalue().decode('utf-8')):
+                    st.success("Recommendations imported successfully!")
+                    st.rerun()  # Refresh the UI to show imported recommendations
     
     # Add zone selection if the Zone category is selected
     filtered_df = df.copy()
@@ -166,7 +190,29 @@ def create_dashboard(df, name):
             
         plt.tight_layout()
         st.pyplot(fig)
-
+        
+        # Custom recommendation input for Distribution chart
+        input_key = f"{name}_Distribution_recommendation"
+        # Initialize session state for this recommendation if it doesn't exist
+        if input_key not in st.session_state:
+            st.session_state[input_key] = "Enter your insights about distribution here..."
+            
+        # Add text area for custom recommendations
+        st.markdown("<div style='background-color: #f0f2f6; padding: 10px; border-radius: 5px; margin-top: 10px;'>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin: 0px 0px 5px 0px; color: #444;'>Your Recommendation:</h4>", unsafe_allow_html=True)
+        custom_insight = st.text_area(
+            "Enter your custom recommendation for Distribution:",
+            value=st.session_state[input_key],
+            height=100,
+            key=f"textarea_{input_key}",
+            label_visibility="collapsed"
+        )
+        
+        # Save button for the recommendation
+        if st.button("Save", key=f"save_{input_key}"):
+            st.session_state[input_key] = custom_insight
+            st.success("Recommendation saved!")
+        
     with col2:
         # Chart 2: KPI Performance
         st.subheader(f'KPI Performance by {name}')
@@ -221,6 +267,29 @@ def create_dashboard(df, name):
             
         plt.tight_layout()
         st.pyplot(fig)
+        
+        # Custom recommendation input
+        input_key = f"{name}_KPI_Performance_recommendation"
+        # Initialize session state for this recommendation if it doesn't exist
+        if input_key not in st.session_state:
+            st.session_state[input_key] = "Enter your insights about KPI performance here..."
+            
+        # Add text area for custom recommendations
+        st.markdown("<div style='background-color: #f0f2f6; padding: 10px; border-radius: 5px; margin-top: 10px;'>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin: 0px 0px 5px 0px; color: #444;'>Your Recommendation:</h4>", unsafe_allow_html=True)
+        custom_insight = st.text_area(
+            "Enter your custom recommendation for KPI Performance:",
+            value=st.session_state[input_key],
+            height=100,
+            key=f"textarea_{input_key}",
+            label_visibility="collapsed"
+        )
+        
+        # Save button for the recommendation
+        if st.button("Save", key=f"save_{input_key}"):
+            st.session_state[input_key] = custom_insight
+            st.success("Recommendation saved!")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     with col3:
         # Chart 3: Performance Multiple
@@ -276,6 +345,27 @@ def create_dashboard(df, name):
             
         plt.tight_layout()
         st.pyplot(fig)
+
+        # Custom recommendation input for Performance Multiple chart
+        input_key = f"{name}_Performance_Multiple_recommendation"
+        # Initialize session state for this recommendation if it doesn't exist
+        
+        # Add text area for custom recommendations
+        st.markdown("<div style='background-color: #f0f2f6; padding: 10px; border-radius: 5px; margin-top: 10px;'>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin: 0px 0px 5px 0px; color: #444;'>Your Recommendation:</h4>", unsafe_allow_html=True)
+        custom_insight = st.text_area(
+            "Enter your custom recommendation for Performance Multiple:",
+            value=st.session_state.get(input_key, "Enter your insights about performance multiple here..."),
+            height=100,
+            key=f"textarea_{input_key}",
+            label_visibility="collapsed"
+        )
+        
+        # Save button for the recommendation
+        if st.button("Save", key=f"save_{input_key}"):
+            save_recommendation(input_key, custom_insight)
+            st.success("Recommendation saved and will persist between sessions!")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # Create three columns for the second row of charts
     st.markdown("---")
